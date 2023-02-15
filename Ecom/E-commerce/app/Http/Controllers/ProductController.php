@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\Product;
+use App\Models\Electric;
+use App\Models\Cloths;
+use App\Models\Health;
+use App\Models\Cart;
+use App\Models\Order;
+use Session;
+class ProductController extends Controller
+{
+   function index(){
+      $data=Product::all();
+    return view('product',['products'=>$data]);
+   }
+   function electric(){
+    $data=Electric::all();
+    return view('electric',['electrics'=>$data]);
+   }
+   function list(){
+    $data=Electric::all();
+    return view('list',['members'=>$data]);
+   }
+   function delete($id){
+    $data=Electric::find($id);
+    $data->delete();
+    return redirect('list');
+   }
+   function cloth(){
+    $data=Cloths::all();
+    return view('cloth',['cloths'=>$data]);
+   }
+   function health(){
+    $data=Health::all();
+    return view('health',['healths'=>$data]);
+   }
+   function detail($id){
+   $data= Product::find($id);
+   return view('detail',['product'=>$data]);
+   }
+   function clothdetail($id){
+     $data =Cloths::find($id);
+     return view('clothdetail',['cloth'=>$data]);
+    }
+    function electricdetail($id){
+        $data =Electric::find($id);
+        return view('electricdetail',['electric'=>$data]);
+       }
+    function healthdetail($id){
+        $data =Health::find($id);
+        return view('healthdetail',['health'=>$data]);
+       }
+   function search(Request $req)
+   {
+       $data= Product::
+       where('name', 'like', '%'.$req->input('query').'%')
+       ->get();
+       return view('search',['products'=>$data]);
+   } 
+   function addToCart(Request $req)
+   {
+       if($req->session()->has('user'))
+       {
+          $cart= new Cart;
+          $cart->user_id=$req->session()->get('user')['id'];
+          $cart->product_id=$req->product_id;
+          $cart->save();
+          return redirect('/');
+
+       }
+       else
+       {
+           return redirect('/login');
+       }
+   }
+   static function cartItem()
+   {
+    $userId=Session::get('user')['id'];
+    return Cart::where('user_id',$userId)->count();
+   }
+   function cartList()
+   {
+       $userId=Session::get('user')['id'];
+      $products= DB::table('cart')
+       ->join('products','cart.product_id','=','products.id')
+       ->where('cart.user_id',$userId)
+       ->select('products.*','cart.id as cart_id')
+       ->get();
+
+       return view('cartlist',['products'=>$products]);
+   }
+   function removeCart($id)
+   {
+       Cart::destroy($id);
+       return redirect('cartlist');
+   }
+   function orderNow()
+   {
+       $userId=Session::get('user')['id'];
+       $total= $products= DB::table('cart')
+        ->join('products','cart.product_id','=','products.id')
+        ->where('cart.user_id',$userId)
+        ->sum('products.price');
+
+        return view('ordernow',['total'=>$total]);
+   }
+   function orderPlace(Request $req)
+   {
+       $userId=Session::get('user')['id'];
+        $allCart= Cart::where('user_id',$userId)->get();
+        foreach($allCart as $cart)
+        {
+            $order= new Order;
+            $order->product_id=$cart['product_id'];
+            $order->user_id=$cart['user_id'];
+            $order->status="pending";
+            $order->payment_method=$req->payment;
+            $order->payment_status="pending";
+            $order->address=$req->address;
+            $order->save();
+            Cart::where('user_id',$userId)->delete(); 
+        }
+        $req->input();
+        return redirect('/');
+   }
+   function myOrders()
+   {
+       $userId=Session::get('user')['id'];
+       $orders= DB::table('orders')
+        ->join('products','orders.product_id','=','products.id')
+        ->where('orders.user_id',$userId)
+        ->get();
+
+        return view('myorders',['orders'=>$orders]);
+   }
+   function admin(Request $req){
+    // return $req->input();
+    $product=new Product;
+    $product->name=$req->name;
+    $product->price=$req->price;
+    $product->category=$req->category;
+    $product->description=$req->description;
+    $product->gallery=$req->gallery;
+    $product->save();
+    return redirect('/');
+
+ }
+ function adminelec(Request $req){
+    // return $req->input();
+    $product=new Electric;
+    $product->name=$req->name;
+    $product->price=$req->price;
+    $product->category=$req->category;
+    $product->description=$req->description;
+    $product->gallery=$req->gallery;
+    $product->save();
+    return redirect('/elec');
+
+ }
+ function adminhealth(Request $req){
+    // return $req->input();
+    $product=new Health;
+    $product->name=$req->name;
+    $product->price=$req->price;
+    $product->category=$req->category;
+    $product->description=$req->description;
+    $product->gallery=$req->gallery;
+    $product->save();
+    return redirect('/health');
+
+ }
+ function admincloth(Request $req){
+    // return $req->input();
+    $product=new Cloths;
+    $product->name=$req->name;
+    $product->price=$req->price;
+    $product->category=$req->category;
+    $product->description=$req->description;
+    $product->gallery=$req->gallery;
+    $product->save();
+    return redirect('/cloth');
+
+ }
+   
+}
